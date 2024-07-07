@@ -1,0 +1,445 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+    <style>
+        .circular {
+            width: 30px !important;
+            height: 30px !important;
+            border-radius: 15px !important;
+            display: inline-block !important;
+            margin-left: 10px !important;
+        }
+
+        .clicked {
+            border: 3px solid #007bff;
+        }
+
+        .inline-form {
+            margin-bottom: 0 !important;
+        }
+
+        .pallete {
+            float: right !important;
+        }
+
+        .drawing_body {
+            padding: 0;
+            display: grid;
+        }
+
+        #image_selection {
+            display: flex;
+            flex-direction: column;
+            row-gap: 4px;
+            justify-content: center;
+        }
+
+        #image_selection img {
+            border: 5px solid black;
+            border-radius: 2rem;
+            background-color: pink;
+            transition: transform .2s;
+            height: 18vh;
+            width: 8vw;
+            margin: 0px;
+            padding: 0px;
+        }
+
+        #myCanvas {   
+          #myCanvas {
+        width: 100%; /* Canvas width will be 100% of its container */
+        height: auto; /* Canvas height will adjust to maintain aspect ratio */
+    }
+        }
+
+        .drawing_body img {
+            height: 540px;
+            width: 545px;
+            border: 5px;
+            border-radius: 2rem;
+        }
+
+        #navbar {
+            height: 12vh;
+        }
+
+        .page {
+            height: 80vh;
+            width: 80vw;
+            position: relative;
+            padding: 10px;
+        }
+
+        .border_page {
+            height: 80vh;
+            width: 80vw;
+            /* position: relative; */
+            border: 5px solid black;
+            border-radius: 2rem;
+            margin: 2%;
+            /* align-items:center; */
+        }
+
+        #print_Preview {
+            height: 75vh;
+            margin: 10vh 28vw auto 28vw;
+            border: 5px solid black;
+            border-radius: 2rem;
+            padding: 2%;
+            display: flex;
+            flex-direction: column;
+
+        }
+
+        #print_Preview img {
+            height: 50vh;
+            width: 30vw;
+        }
+
+        @media (max-width: 1000px) {
+            #image_selection {
+                flex-direction: row;
+                justify-content: space-around;
+                margin-top: 10vh;
+            }
+
+            .drawing_body {
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            #image_selection img {
+                height: 15vh;
+                width: 20vw;
+            }
+            /* #canvas{
+              height: 80vh;
+              width: 80vw;
+            } */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="canvas_Drawing">
+        <nav id="navbar" class="navbar navbar-expand-sm bg-dark">
+            <div id="brushTool" style="display: inline-flex;" class="mr-auto"></div>
+            <button type="button" class="btn btn-primary">Erase</button>&emsp;
+            <button type="button" class="btn btn-primary" id="clear" onclick="clearArea()">Clear</button>&emsp;
+            <button type="button" class="btn btn-primary mr-auto" onclick="clickImage()">Preview</button>&emsp;
+            <div class="pallete">
+            </div>
+        </nav>
+        <div class="container-fluid drawing_body">
+            <div class="paintingarea" style="display: flex; justify-content: center;">
+                <div class="border_page">
+                    <div class="page" id="print_page">
+                        
+                        <canvas id="myCanvas" height="550px" width="1000px" ></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="pop_Div">
+        <div id="print_Preview">
+            <img src="" alt="TEST" height="45vh" width="45vh" id="preView">
+            <div class="button d-flex justify-content-between mt-5">
+                <button type="button" class="btn btn-primary" onclick="show_Drawing()">Back To Drawing</button>
+                <button type="button" class="btn btn-success">Print</button>
+            </div>
+        </div>
+    </div>
+    <script>
+
+        const canvas = document.getElementById('myCanvas');
+        const context = canvas.getContext('2d');
+        let drawing_preview = '';
+        let drawingImage = ['https://static-local.virtupaper.co.in/project/file/20230403-090503-2lpw-image_3.jpg', 'https://static-local.virtupaper.co.in/project/file/20230403-080346-4udg-image-2.jpg',
+            'https://static.virtubox.io/project/file/20230328-064303-jmsy-chota-bhim.png',
+
+
+            'https://static.virtubox.io/project/file/20230328-064514-iu5s-nobita.png'
+        ]
+        let smallImage = '';
+        const ongoingTouches = [];
+        var color = 'rgb(0, 0, 0, 1)';
+        var brush_Size = 15;
+        let inactivityTimer;
+        document.getElementById("pop_Div").style.display = "none";
+        // document.getElementById("image_selection").innerHTML = smallImage;
+        function createImage(e) {
+            document.addEventListener("DOMContentLoaded", startup);
+            document.getElementById("clear").click();
+            document.getElementById("bigImage").src = drawingImage[e];
+        }
+
+        var offsetX;
+        var offsetY;
+        function startup() {
+            canvas.addEventListener('touchstart', handleStart);
+            canvas.addEventListener('touchend', handleEnd);
+            canvas.addEventListener('touchcancel', handleCancel);
+            canvas.addEventListener('touchmove', handleMove);
+        }
+        function startupAgain() {
+            document.addEventListener("DOMContentLoaded", startup);
+        }
+        document.addEventListener("DOMContentLoaded", startup);
+        function handleStart(evt) {
+            evt.preventDefault();
+            const touches = evt.changedTouches;
+            offsetX = canvas.getBoundingClientRect().left;
+            offsetY = canvas.getBoundingClientRect().top;
+            console.log(offsetX, offsetY)
+            for (let i = 0; i < touches.length; i++) {
+                ongoingTouches.push(copyTouch(touches[i]));
+            }
+        }
+        function handleMove(evt) {
+            evt.preventDefault();
+            const touches = evt.changedTouches;
+            for (let i = 0; i < touches.length; i++) {
+                const idx = ongoingTouchIndexById(touches[i].identifier);
+                if (idx >= 0) {
+                    context.beginPath();
+                    context.moveTo(ongoingTouches[idx].clientX - offsetX, ongoingTouches[idx].clientY - offsetY);
+                    context.lineTo(touches[i].clientX - offsetX, touches[i].clientY - offsetY);
+                    context.strokeStyle = color;
+                    context.lineWidth = brush_Size;
+                    context.lineJoin = "round";
+                    context.closePath();
+                    context.stroke();
+                    ongoingTouches.splice(idx, 1, copyTouch(touches[i]));  // swap in the new touch record
+                }
+            }
+        }
+        function handleEnd(evt) {
+            evt.preventDefault();
+            const touches = evt.changedTouches;
+            for (let i = 0; i < touches.length; i++) {
+                var color = 'red';
+                let idx = ongoingTouchIndexById(touches[i].identifier);
+                if (idx >= 0) {
+                    context.fillStyle = color;
+                    context.lineWidth = brush_Size;
+                    ongoingTouches.splice(idx, 1);  // remove it; we're done
+                }
+            }
+        }
+        function handleCancel(evt) {
+            evt.preventDefault();
+            const touches = evt.changedTouches;
+            for (let i = 0; i < touches.length; i++) {
+                let idx = ongoingTouchIndexById(touches[i].identifier);
+                ongoingTouches.splice(idx, 1);  // remove it; we're done
+            }
+        }
+        function copyTouch({ identifier, clientX, clientY }) {
+            return { identifier, clientX, clientY };
+        }
+        function ongoingTouchIndexById(idToFind) {
+            for (let i = 0; i < ongoingTouches.length; i++) {
+                const id = ongoingTouches[i].identifier;
+                if (id === idToFind) {
+                    return i;
+                }
+            }
+            return -1;    // not found
+        }
+        function clearArea() {
+            context.setTransform(1, 0, 0, 1, 0, 0);
+            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
+            context.strokeStyle = color;
+        }
+        var pubsub = {
+            // An event subscribes
+            on: (eventName, func) => {
+                // If events is not defined, define it
+                if (!this.events)
+                    this.events = {};
+                //Add the function to event's list
+                this.events[eventName] = this.events[eventName] || [];
+                this.events[eventName].push(func);
+            },
+
+            // An event unsubscribes
+            off: (eventName, func) => {
+                //If there is an event loop in its list and find the function and remove it
+                if (this.events[eventName])
+                    for (var index in this.events[eventName])
+                        if (this.events[eventName][index] === func) {
+                            this.events[eventName].splice(index, 1);
+                            break;
+                        }
+            },
+
+            // An event is published
+            emit: (eventName, data) => {
+                // If event is present loop through it and execute the functions on its list with the data.
+                if (this.events[eventName])
+                    this.events[eventName].forEach(func => {
+                        func(data);
+                    });
+            }
+        }
+
+        var myCanvas = (id => {
+            // Get the canvas element from html
+            var canvas = document.getElementById(id);
+            var context = canvas.getContext("2d");
+            var bs = 15;
+            var erase = () => {       // Eraser
+                context.globalCompositeOperation = "destination-out";
+                context.strokeStyle = "rgba(0,0,0,0)";
+            }
+            var clrcan = () => {      // Clear screen
+                context.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            var setBrush = size => {    // Set Brush Size
+                bs = size;
+            }
+            var setcolor = color => {     // Set Brush Color
+                context.globalCompositeOperation = "source-over";
+                context.fillStyle = color;
+                context.strokeStyle = color;
+            }
+            pubsub.on('changeBrush', setBrush);
+            pubsub.on('setColor', setcolor);
+            pubsub.on('erase', erase);
+            pubsub.on('clearCanvas', clrcan);
+            return {
+                canvas: canvas
+            }
+        })("myCanvas");
+
+        // This module exports the navbar element
+        var navbar = (() => {
+            // Get the navbar element
+            var navbar = document.getElementById('navbar');
+            var getNavbar = () => {
+                return navbar;
+            }
+            return {
+                getNavbar: getNavbar
+            }
+        })();
+
+        // This module handles events on color pallete
+        var colorPallete = (() => {
+            // Get color pallete element from navbar
+            var colorPallete = navbar.getNavbar().childNodes[9];
+            // Initialize list of available colors
+            var colors = ["#000", "#fff", "#99c2ff", "#ff6666", "#99ff99", "#ffff80", "#dea562", "#761AA7"];
+            // This function sets listeners on all color elements
+            var setListeners = () => {
+                // Get all the color elements
+                var shades = colorPallete.getElementsByClassName('circular');
+                for (var i = 0; i < shades.length; i++) {
+                    // Set listener on each element
+                    shades[i].addEventListener('click', event => {
+                        // Remove class from previous clicked element
+                        colorPallete.getElementsByClassName('clicked')[0].classList.remove('clicked');
+                        // Add clicked class to clicked element
+                        event.target.classList.add('clicked');
+                        // Publish setColor event with background color of the clicked button
+                        pubsub.emit('setColor', event.target.style.backgroundColor);
+                        color = event.target.style.backgroundColor;
+                    });
+                }
+            }
+            // This function renders our color elements to HTML
+            var render = () => {
+                // Clear color pallete
+                colorPallete.innerHTML = "";
+                // Loop through the list of colors and add their HTML
+                for (var i in colors) {
+                    colorPallete.innerHTML += `<div class="circular" style="background-color: ${colors[i]}; margin:3px;"></div>`;
+                }
+                // Set clicked class on first element
+                colorPallete.querySelector('.circular').classList.add('clicked');
+                console.log(colorPallete.querySelector('.circular').style.backgroundColor);
+                pubsub.emit('setColor', colorPallete.querySelector('.circular').style.backgroundColor);
+            }
+            // Render the elements
+            render();
+            // Set Listeners
+            setListeners();
+        })();
+
+        // This module handles the operatons of paint brush like change size and show in HTML
+        var brushTool = (() => {
+            // Get the brush tool element
+            var brushTool = navbar.getNavbar().childNodes[1];
+            // Initialize brush size and minimum and maximum size constants
+            var brushSize = 15;
+            var maxbs = 50, minbs = 0.5;
+            var setBrushSize = newbs => {
+                // If new brush size is in between min and max the set it else set min or max based on condition
+                if (newbs < minbs) brushSize = minbs;
+                else if (newbs > maxbs) brushSize = maxbs;
+                else brushSize = newbs;
+                // Publish that brush size has changed
+                pubsub.emit('changeBrush', brushSize);
+                brush_Size = brushSize;
+            }
+            var render = () => {
+                // Add innerHTML to brushTool
+                brushTool.innerHTML += `<button type="button" class="btn btn-primary nav-brand">Brush Size</button>&emsp;<div class = "form-group inline-form"><input min = "1" max = "50" value = "${brushSize}" type = "range" class = "form-control small" id = "usr"></div>&emsp;`
+            }
+            var setListener = () => {
+                // Add listener to set brush size
+                brushTool.childNodes[2].childNodes[0].addEventListener('change', e => {
+                    setBrushSize(e.target.value);
+                });
+            }
+            render();
+            setListener();
+        })();
+
+        // This module handles miscellaneous events such as  erase.
+        var misc = (() => {
+            // Get erase element from navbar
+            var erase = navbar.getNavbar().childNodes[3];
+            // Add event listener
+            erase.addEventListener('click', (e) => {
+                // Publish erase event
+                pubsub.emit('erase');
+            });
+        })();
+
+        function show_Drawing() {
+            document.getElementById("canvas_Drawing").style.display = "block";
+            document.getElementById("pop_Div").style.display = "none";
+        }
+        function clickImage() {
+
+            var ele = document.getElementById("print_page");
+            domtoimage.toPng(ele)
+                .then(function (dataUrl) {
+                    var img = new Image();
+                    img.src = dataUrl;
+                    console.log(dataUrl);
+                    document.getElementById("canvas_Drawing").style.display = "none";
+                    document.getElementById("pop_Div").style.display = "block";
+                    document.getElementById("preView").src = dataUrl;
+                })
+                .catch(function (error) {
+                    alert('oops, something went wrong!', error);
+                });
+        }
+        function clearCanvas() {
+          context.clearRect(0,0, canvas.width, canvas.height);
+        }
+        function resetTimer(){
+          clearTimeout(inactivityTimer);
+          inactivityTimer = setTimeout(clearCanvas,25000);
+        }
+        document.addEventListener('touchend', resetTimer);
+    </script>
+</body>
+
+</html>
